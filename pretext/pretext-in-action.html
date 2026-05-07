@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pretext In Action — Pretext</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/shared.css" />
+    <style>
+      body {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      h1 {
+        margin-bottom: 4px;
+      }
+      h2 {
+        margin-top: 48px;
+        border-top: 1px solid var(--pt-border);
+        padding-top: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav" aria-label="Demos">
+      <a href="index.html">Home</a>
+      <a href="pretext-api.html">Api Reference</a>
+      <a href="pretext-in-action.html" aria-current="page">Pretext In Action</a>
+      <a href="advanced-api.html">Advanced API</a>
+      <a href="ascii-particle-field.html">ASCII field</a>
+    </nav>
+
+    <h1>Pretext in Action</h1>
+    <p class="muted">
+      Three examples using just <code>prepare()</code> + <code>layout()</code>.
+      Each section is independent.
+    </p>
+
+    <!-- ============================================================
+       1. ACCORDION
+       Animate open/close to a height computed by Pretext.
+       No hidden rendering, no max-height hacks.
+       ============================================================ -->
+
+    <h2>1. Accordion</h2>
+    <p class="muted" style="font-size: 14px">
+      Click a section. Pretext computes the open height — the CSS transition
+      animates to it.
+    </p>
+
+    <div id="accordion"></div>
+
+    <style>
+      .acc-item {
+        border: 1px solid var(--pt-border);
+        border-radius: 6px;
+        margin-bottom: 6px;
+        overflow: hidden;
+      }
+      .acc-header {
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: 500;
+        background: var(--pt-surface);
+        user-select: none;
+      }
+      .acc-header:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .acc-body {
+        overflow: hidden;
+        height: 0;
+        transition: height 0.3s ease;
+      }
+      .acc-content {
+        padding: 10px 14px;
+        font: 16px/24px Inter;
+      }
+    </style>
+
+    <!-- ============================================================
+       2. VIRTUALIZED LIST
+       10,000 items, only ~visible ones rendered.
+       Pretext computes all heights upfront — no guessing.
+       ============================================================ -->
+
+    <h2>2. Virtualized List</h2>
+    <p class="muted" style="font-size: 14px">
+      10,000 items. Heights computed by Pretext before any DOM insertion. Scroll
+      to see only visible items rendered.
+    </p>
+
+    <div
+      id="virtual-container"
+      style="
+        height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--pt-border);
+        border-radius: 6px;
+        position: relative;
+      "
+    >
+      <div id="virtual-spacer" style="position: relative"></div>
+    </div>
+    <p class="muted" style="font-size: 13px" id="virtual-stats"></p>
+
+    <style>
+      .virtual-item {
+        position: absolute;
+        left: 0;
+        right: 0;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--pt-border);
+        font: 15px/22px Inter;
+        overflow-wrap: break-word;
+      }
+    </style>
+
+    <!-- ============================================================
+       3. "SHOW MORE" / LINE CLAMPING
+       Check if text exceeds N lines. If so, clamp and show
+       a toggle. Uses lineCount from layout().
+       ============================================================ -->
+
+    <h2>3. "Show More" Line Clamping</h2>
+    <p style="color: #666; font-size: 14px">
+      <code>layout()</code> returns <code>lineCount</code>. If it exceeds the
+      limit, we clamp and show a toggle.
+    </p>
+
+    <div id="clamp-demos"></div>
+
+    <style>
+      .clamp-card {
+        border: 1px solid var(--pt-border);
+        border-radius: 6px;
+        padding: 14px;
+        margin-bottom: 10px;
+      }
+      .clamp-text {
+        font: 16px/24px Inter;
+        overflow: hidden;
+        overflow-wrap: break-word;
+      }
+      .clamp-toggle {
+        color: #2563eb;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 4px;
+        background: none;
+        border: none;
+        padding: 0;
+        font-family: inherit;
+      }
+      .clamp-toggle:hover {
+        text-decoration: underline;
+      }
+    </style>
+
+    <!-- ============================================================
+       SCRIPTS — one per demo, sharing the same import
+       ============================================================ -->
+
+    <script type="module">
+      import { prepare, layout } from '@chenglou/pretext';
+
+      // Wait for Inter to load so measurements are accurate
+      await document.fonts.ready;
+
+      // ==========================================================
+      // 1. ACCORDION
+      // ==========================================================
+      (() => {
+        const FONT = '16px Inter';
+        const LINE_HEIGHT = 24;
+
+        const sections = [
+          {
+            title: 'What is Pretext?',
+            body: 'A pure JS library for text measurement and layout. It computes how tall text will be at a given width without touching the DOM. No hidden elements, no reflow, no guesswork.',
+          },
+          {
+            title: 'How does it work?',
+            body: 'prepare() segments and measures text once using canvas measureText(). layout() then does pure arithmetic over cached widths — walking segments, accumulating until a line overflows, counting lines, multiplying by line-height. The result matches what the browser would produce.',
+          },
+          {
+            title: 'Why does this matter?',
+            body: 'Layout reflow (triggered by reading offsetHeight, getBoundingClientRect, etc.) is one of the most expensive browser operations. It blocks the main thread and cascades through the entire page. Pretext eliminates this for text measurement — unlocking smooth animations, virtualization, masonry layouts, and more.',
+          },
+        ];
+
+        const container = document.getElementById('accordion');
+
+        // Build the DOM first so we can read the actual content width
+        const items = sections.map((section) => {
+          const item = document.createElement('div');
+          item.className = 'acc-item';
+          item.innerHTML = `
+          <div class="acc-header">${section.title}</div>
+          <div class="acc-body"><div class="acc-content">${section.body}</div></div>
+        `;
+          container.appendChild(item);
+          return item;
+        });
+
+        // Read content width once (clientWidth includes padding, so subtract it)
+        const contentEl = items[0].querySelector('.acc-content');
+        const contentWidth =
+          contentEl.clientWidth -
+          parseFloat(getComputedStyle(contentEl).paddingLeft) -
+          parseFloat(getComputedStyle(contentEl).paddingRight);
+
+        items.forEach((item, i) => {
+          const prepared = prepare(sections[i].body, FONT);
+          const { height } = layout(prepared, contentWidth, LINE_HEIGHT);
+          const openHeight = height + 20; // + vertical padding
+
+          let open = false;
+          const body = item.querySelector('.acc-body');
+          item.querySelector('.acc-header').addEventListener('click', () => {
+            open = !open;
+            body.style.height = open ? openHeight + 'px' : '0';
+          });
+        });
+      })();
+
+      // ==========================================================
+      // 2. VIRTUALIZED LIST
+      // ==========================================================
+      (() => {
+        const FONT = '15px Inter';
+        const LINE_HEIGHT = 22;
+        const ITEM_PADDING = 16; // top + bottom padding
+        const containerEl = document.getElementById('virtual-container');
+        const style = getComputedStyle(containerEl);
+        const ITEM_WIDTH =
+          containerEl.clientWidth -
+          parseFloat(style.paddingLeft) -
+          parseFloat(style.paddingRight) -
+          28; // minus item padding
+
+        const phrases = [
+          'The quick brown fox jumps over the lazy dog.',
+          'Pack my box with five dozen liquor jugs.',
+          'How vexingly quick daft zebras jump!',
+          'Sphinx of black quartz, judge my vow.',
+          'Two driven jocks help fax my big quiz.',
+          'The five boxing wizards jump quickly at dawn.',
+          'Jinxed wizards pluck ivy from the big quilt.',
+          'Crazy Frederick bought many very exquisite opal jewels.',
+          'We promptly judged antique ivory buckles for the next prize.',
+          'A quick movement of the enemy will jeopardize six gunboats.',
+        ];
+
+        // Generate 10,000 items with variable-length text
+        const items = [];
+        for (let i = 0; i < 10000; i++) {
+          const repeats = 1 + (i % 5);
+          let text = '#' + i + ' — ';
+          for (let r = 0; r < repeats; r++) {
+            if (r > 0) text += ' ';
+            text += phrases[i % phrases.length];
+          }
+          items.push(text);
+        }
+
+        // Precompute all heights with Pretext
+        const t0 = performance.now();
+        const heights = items.map((text) => {
+          const prepared = prepare(text, FONT);
+          const { height } = layout(prepared, ITEM_WIDTH, LINE_HEIGHT);
+          return height + ITEM_PADDING + 1; // +1 for border
+        });
+        const prepMs = performance.now() - t0;
+
+        // Build a prefix-sum array for fast offset lookup
+        const offsets = [0];
+        for (let i = 0; i < heights.length; i++) {
+          offsets.push(offsets[i] + heights[i]);
+        }
+        const totalHeight = offsets[offsets.length - 1];
+
+        const spacer = document.getElementById('virtual-spacer');
+        spacer.style.height = totalHeight + 'px';
+
+        document.getElementById('virtual-stats').textContent =
+          `Computed ${items.length.toLocaleString()} item heights in ${prepMs.toFixed(0)}ms. Total scroll height: ${Math.round(totalHeight).toLocaleString()}px.`;
+
+        function render() {
+          const scrollTop = containerEl.scrollTop;
+          const viewHeight = containerEl.clientHeight;
+          const viewBottom = scrollTop + viewHeight;
+
+          // Binary search for first visible item
+          let lo = 0,
+            hi = heights.length - 1;
+          while (lo < hi) {
+            const mid = Math.floor((lo + hi) / 2);
+            if (offsets[mid + 1] <= scrollTop) lo = mid + 1;
+            else hi = mid;
+          }
+
+          let html = '';
+          for (let i = lo; i < heights.length && offsets[i] < viewBottom; i++) {
+            html += `<div class="virtual-item" style="top:${offsets[i]}px; height:${heights[i]}px;">${items[i]}</div>`;
+          }
+          spacer.innerHTML = html;
+        }
+
+        containerEl.addEventListener('scroll', render);
+        render();
+      })();
+
+      // ==========================================================
+      // 3. "SHOW MORE" / LINE CLAMPING
+      // ==========================================================
+      (() => {
+        const FONT = '16px Inter';
+        const LINE_HEIGHT = 24;
+        const MAX_LINES = 3;
+
+        const texts = [
+          'Short text that fits in three lines easily.',
+          'This is a medium-length paragraph that might or might not exceed three lines depending on the container width. It has a few sentences to test the boundary.',
+          'This is a much longer block of text that will definitely exceed three lines. It goes on and on to demonstrate how the "Show more" pattern works with Pretext. Instead of rendering the text, measuring it with the DOM, and then deciding whether to truncate, we simply call layout() and check lineCount. If it exceeds our limit, we clamp the height and show a toggle. No hidden elements, no reflow, no flash of unclamped content. The user sees the clamped version immediately.',
+        ];
+
+        const container = document.getElementById('clamp-demos');
+
+        // Create one card to measure the actual text width
+        const probe = document.createElement('div');
+        probe.className = 'clamp-card';
+        const probeText = document.createElement('div');
+        probeText.className = 'clamp-text';
+        probe.appendChild(probeText);
+        container.appendChild(probe);
+        const TEXT_WIDTH = probeText.clientWidth;
+        console.log(TEXT_WIDTH);
+        container.removeChild(probe);
+
+        texts.forEach((text) => {
+          const prepared = prepare(text, FONT);
+          const full = layout(prepared, TEXT_WIDTH, LINE_HEIGHT);
+          const needsClamp = full.lineCount > MAX_LINES;
+          const clampedHeight = MAX_LINES * LINE_HEIGHT;
+
+          const card = document.createElement('div');
+          card.className = 'clamp-card';
+
+          const textDiv = document.createElement('div');
+          textDiv.className = 'clamp-text';
+          textDiv.textContent = text;
+          if (needsClamp) textDiv.style.height = clampedHeight + 'px';
+          card.appendChild(textDiv);
+
+          if (needsClamp) {
+            const btn = document.createElement('button');
+            btn.className = 'clamp-toggle';
+            btn.textContent = `Show more (${full.lineCount} lines)`;
+            let expanded = false;
+            btn.addEventListener('click', () => {
+              expanded = !expanded;
+              textDiv.style.height = expanded
+                ? full.height + 'px'
+                : clampedHeight + 'px';
+              btn.textContent = expanded
+                ? 'Show less'
+                : `Show more (${full.lineCount} lines)`;
+            });
+            card.appendChild(btn);
+          } else {
+            const note = document.createElement('div');
+            note.style.cssText = 'font-size:13px; color:#999; margin-top:4px;';
+            note.textContent = `${full.lineCount} line${full.lineCount === 1 ? '' : 's'} — no clamping needed`;
+            card.appendChild(note);
+          }
+
+          container.appendChild(card);
+        });
+      })();
+    </script>
+  </body>
+</html>

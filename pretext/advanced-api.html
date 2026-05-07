@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced API — Pretext</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/shared.css" />
+    <style>
+      body {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav" aria-label="Demos">
+      <a href="./index.html">Home</a>
+      <a href="./pretext-api.html">API Reference</a>
+      <a href="./advanced-api.html" aria-current="page">Advanced API</a>
+      <a href="./pretext-in-action.html">Pretext In Action</a>
+      <a href="./ascii-particle-field.html">ASCII Field</a>
+    </nav>
+
+    <h1>Pretext Advanced API</h1>
+    <p style="color: #666">
+      Use-case 2: lay out paragraph lines yourself. Render to canvas,
+      shrink-wrap bubbles, flow text around obstacles.
+    </p>
+
+    <textarea
+      id="text"
+      rows="3"
+      style="width: 100%; font: inherit; padding: 8px; box-sizing: border-box"
+    >
+Pretext lets you lay out text line by line. You get the actual line strings, their widths, and cursor positions. This means you can render to canvas, SVG, or WebGL — not just the DOM. You can also vary the available width per line, flowing text around images or other obstacles.</textarea
+    >
+
+    <!-- ============================================================
+       1. layoutWithLines — render to canvas
+       Get individual line strings + widths, draw them anywhere.
+       ============================================================ -->
+
+    <h2
+      style="
+        margin-top: 40px;
+        border-top: 1px solid var(--pt-border);
+        padding-top: 20px;
+      "
+    >
+      1. layoutWithLines()
+    </h2>
+    <p style="color: #666; font-size: 14px">
+      Returns actual line strings. Here we draw them to a
+      <code>&lt;canvas&gt;</code> — no DOM text at all.
+    </p>
+
+    <p>
+      <label
+        >Width
+        <input id="canvas-width" type="range" min="150" max="600" value="400" />
+        <code id="canvas-width-val">400px</code></label
+      >
+    </p>
+    <p style="font-size: 13px; color: #999" id="canvas-stats"></p>
+    <canvas
+      id="canvas"
+      style="border: 1px solid var(--pt-border); display: block"
+    ></canvas>
+
+    <!-- ============================================================
+       2. walkLineRanges + measureLineStats — shrink-wrap
+       Binary search for the tightest width that keeps the same
+       line count. The "tight bubble" problem.
+       ============================================================ -->
+
+    <h2
+      style="
+        margin-top: 40px;
+        border-top: 1px solid var(--pt-border);
+        padding-top: 20px;
+      "
+    >
+      2. measureLineStats() — shrink-wrap
+    </h2>
+    <p style="color: #666; font-size: 14px">
+      <code>measureLineStats(prepared, width)</code> returns
+      <code>{ lineCount, maxLineWidth }</code> without building line strings. We
+      use it to binary search for the tightest bubble width. There's also
+      <code>walkLineRanges(prepared, width, cb)</code> which calls a callback
+      per line with its width and start/end cursors — useful when you need
+      per-line data rather than just the summary stats.
+    </p>
+
+    <p>
+      <label
+        >Max width
+        <input id="bubble-max" type="range" min="150" max="600" value="350" />
+        <code id="bubble-max-val">350px</code></label
+      >
+    </p>
+    <p style="font-size: 13px; color: #999" id="bubble-stats"></p>
+
+    <div style="display: flex; gap: 20px; align-items: start">
+      <div>
+        <div style="font-size: 12px; color: #999; margin-bottom: 4px">
+          Normal (max-width)
+        </div>
+        <div
+          id="bubble-normal"
+          style="
+            font: 16px/24px Inter;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 8px 12px;
+            overflow-wrap: break-word;
+          "
+        ></div>
+      </div>
+      <div>
+        <div style="font-size: 12px; color: #999; margin-bottom: 4px">
+          Shrink-wrapped
+        </div>
+        <div
+          id="bubble-tight"
+          style="
+            font: 16px/24px Inter;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 8px 12px;
+            overflow-wrap: break-word;
+          "
+        ></div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+       3. layoutNextLineRange — variable width per line
+       Flow text around an obstacle, changing available width
+       on each line.
+       ============================================================ -->
+
+    <h2
+      style="
+        margin-top: 40px;
+        border-top: 1px solid var(--pt-border);
+        padding-top: 20px;
+      "
+    >
+      3. layoutNextLine() — text around obstacles
+    </h2>
+    <p style="color: #666; font-size: 14px">
+      Drag the obstacle around. Text reflows in real time — each line gets a
+      different available width via <code>layoutNextLine()</code>.
+    </p>
+
+    <div
+      id="flow-container"
+      style="
+        position: relative;
+        border: 1px solid var(--pt-border);
+        min-height: 200px;
+        overflow: hidden;
+        cursor: default;
+      "
+    >
+      <div
+        id="obstacle"
+        style="
+          position: absolute;
+          right: 20px;
+          top: 10px;
+          width: 130px;
+          height: 90px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--pt-border-soft);
+          border-radius: 4px;
+          cursor: grab;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          color: var(--pt-fg);
+          user-select: none;
+          z-index: 1;
+        "
+      >
+        drag me
+      </div>
+      <div id="flow-lines" style="position: relative"></div>
+    </div>
+
+    <script type="module">
+      import {
+        prepareWithSegments,
+        layoutWithLines,
+        measureLineStats,
+        layoutNextLine,
+      } from '@chenglou/pretext';
+
+      const FONT = '16px Inter';
+      const LINE_HEIGHT = 24;
+
+      await document.fonts.ready;
+
+      const textInput = document.getElementById('text');
+      let prepared = null;
+
+      function onTextChange() {
+        prepared = prepareWithSegments(textInput.value, FONT);
+        updateCanvas();
+        updateBubble();
+        updateFlow();
+      }
+
+      textInput.addEventListener('input', onTextChange);
+
+      // ==========================================================
+      // 1. layoutWithLines — render to canvas
+      // ==========================================================
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const canvasWidthSlider = document.getElementById('canvas-width');
+      const canvasWidthVal = document.getElementById('canvas-width-val');
+      const canvasStats = document.getElementById('canvas-stats');
+
+      function updateCanvas() {
+        const w = +canvasWidthSlider.value;
+        canvasWidthVal.textContent = w + 'px';
+
+        const { lines, height, lineCount } = layoutWithLines(
+          prepared,
+          w,
+          LINE_HEIGHT,
+        );
+        console.log(lines);
+
+        // Resize canvas and draw each line
+        canvas.width = w * devicePixelRatio;
+        canvas.height = height * devicePixelRatio;
+        canvas.style.width = w + 'px';
+        canvas.style.height = height + 'px';
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+
+        ctx.font = FONT;
+        ctx.fillStyle = '#111';
+        ctx.textBaseline = 'top';
+
+        // Each line has .text and .width — draw them one by one
+        for (let i = 0; i < lines.length; i++) {
+          // Offset by ~4px to approximate the baseline within line-height
+          ctx.fillText(lines[i].text, 0, i * LINE_HEIGHT + 4);
+        }
+
+        canvasStats.textContent =
+          lineCount +
+          ' lines — each line is a { text, width, start, end } object';
+      }
+
+      canvasWidthSlider.addEventListener('input', updateCanvas);
+
+      // ==========================================================
+      // 2. measureLineStats — shrink-wrap binary search
+      // ==========================================================
+
+      const bubbleMaxSlider = document.getElementById('bubble-max');
+      const bubbleMaxVal = document.getElementById('bubble-max-val');
+      const bubbleStats = document.getElementById('bubble-stats');
+      const bubbleNormal = document.getElementById('bubble-normal');
+      const bubbleTight = document.getElementById('bubble-tight');
+
+      function updateBubble() {
+        const maxW = +bubbleMaxSlider.value;
+        bubbleMaxVal.textContent = maxW + 'px';
+
+        // measureLineStats returns { lineCount, maxLineWidth } without building strings.
+        // walkLineRanges does the same but calls a callback per line with { width, start, end },
+        // useful when you need per-line widths or cursors rather than just the aggregate stats.
+        // e.g.: walkLineRanges(prepared, maxW, line => { console.log(line.width) })
+        const { lineCount } = measureLineStats(prepared, maxW);
+
+        // Binary search: find the narrowest width that still produces the same lineCount.
+        // lo = too narrow (causes more lines), hi = wide enough (keeps same line count).
+        // Each iteration tests the midpoint: if it still fits in the same number of
+        // lines, we can go narrower (move hi down); if it wraps to more lines,
+        // we've gone too narrow (move lo up). We stop when lo and hi are within 0.5px.
+        let lo = 50;
+        let hi = maxW;
+        while (hi - lo > 0.5) {
+          const mid = (lo + hi) / 2;
+          if (measureLineStats(prepared, mid).lineCount <= lineCount) {
+            hi = mid; // still fits — try even narrower
+          } else {
+            lo = mid; // too narrow — back off
+          }
+        }
+
+        // Get the actual widest line at that tight width for a pixel-perfect fit
+        const shrunkWidth = Math.ceil(
+          measureLineStats(prepared, Math.ceil(hi)).maxLineWidth,
+        );
+
+        // Show both bubbles
+        bubbleNormal.textContent = textInput.value;
+        bubbleNormal.style.width = maxW + 'px';
+
+        bubbleTight.textContent = textInput.value;
+        bubbleTight.style.width = shrunkWidth + 'px';
+
+        bubbleStats.textContent =
+          'Normal: ' +
+          maxW +
+          'px wide. ' +
+          'Shrink-wrapped: ' +
+          shrunkWidth +
+          'px (' +
+          (maxW - shrunkWidth) +
+          'px saved, same ' +
+          lineCount +
+          ' lines)';
+      }
+
+      bubbleMaxSlider.addEventListener('input', updateBubble);
+
+      // ==========================================================
+      // 3. layoutNextLine — text around a draggable obstacle
+      // ==========================================================
+
+      const flowContainer = document.getElementById('flow-container');
+      const obstacle = document.getElementById('obstacle');
+      const flowLinesEl = document.getElementById('flow-lines');
+
+      function updateFlow() {
+        var containerWidth = flowContainer.clientWidth;
+        var obsRect = obstacle.getBoundingClientRect();
+        var contRect = flowContainer.getBoundingClientRect();
+
+        // Obstacle position relative to container
+        var obsLeft = obsRect.left - contRect.left;
+        var obsRight = obsLeft + obsRect.width;
+        var obsTop = obsRect.top - contRect.top;
+        var obsBottom = obsTop + obsRect.height;
+        var gap = 16;
+
+        // Available space on each side of the obstacle
+        var leftWidth = obsLeft - gap;
+        var rightWidth = containerWidth - obsRight - gap;
+        var rightX = obsRight + gap;
+
+        var cursor = { segmentIndex: 0, graphemeIndex: 0 };
+        var y = 0;
+        var spans = [];
+
+        while (true) {
+          var overlaps = y < obsBottom && y + LINE_HEIGHT > obsTop;
+
+          if (!overlaps) {
+            // Full-width line, no obstacle in the way
+            var line = layoutNextLine(prepared, cursor, containerWidth);
+            console.log(line);
+            if (line === null) break;
+            spans.push({ text: line.text, y: y, x: 0 });
+            cursor = line.end;
+            y += LINE_HEIGHT;
+          } else {
+            // Flow into left side, then right side on the same row
+            var filled = false;
+
+            if (leftWidth > 30) {
+              var leftLine = layoutNextLine(prepared, cursor, leftWidth);
+              if (leftLine === null) break;
+              spans.push({ text: leftLine.text, y: y, x: 0 });
+              cursor = leftLine.end;
+              filled = true;
+            }
+
+            if (rightWidth > 30) {
+              var rightLine = layoutNextLine(prepared, cursor, rightWidth);
+              if (rightLine === null) {
+                if (!filled) break;
+              } else {
+                spans.push({ text: rightLine.text, y: y, x: rightX });
+                cursor = rightLine.end;
+                filled = true;
+              }
+            }
+
+            if (!filled) break;
+            y += LINE_HEIGHT;
+          }
+        }
+
+        // Render as absolutely positioned spans
+        var html = '';
+        for (var i = 0; i < spans.length; i++) {
+          var escaped = spans[i].text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;');
+          html +=
+            '<div style="position:absolute; left:' +
+            spans[i].x +
+            'px; top:' +
+            spans[i].y +
+            'px; height:' +
+            LINE_HEIGHT +
+            'px; font:' +
+            FONT +
+            '; line-height:' +
+            LINE_HEIGHT +
+            'px; white-space:nowrap;">' +
+            escaped +
+            '</div>';
+        }
+        flowLinesEl.innerHTML = html;
+
+        var totalHeight = Math.max(y, obsBottom) + 10;
+        flowContainer.style.height = totalHeight + 'px';
+      }
+
+      // Drag logic
+      var dragging = false;
+      var dragOffsetX = 0;
+      var dragOffsetY = 0;
+
+      obstacle.addEventListener('mousedown', function (e) {
+        dragging = true;
+        dragOffsetX = e.clientX - obstacle.getBoundingClientRect().left;
+        dragOffsetY = e.clientY - obstacle.getBoundingClientRect().top;
+        obstacle.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!dragging) return;
+        var contRect = flowContainer.getBoundingClientRect();
+        var x = e.clientX - contRect.left - dragOffsetX;
+        var y = e.clientY - contRect.top - dragOffsetY;
+
+        // Clamp to container bounds
+        x = Math.max(0, Math.min(x, contRect.width - obstacle.offsetWidth));
+        y = Math.max(0, y);
+
+        obstacle.style.left = x + 'px';
+        obstacle.style.top = y + 'px';
+        obstacle.style.right = 'auto';
+        updateFlow();
+      });
+
+      document.addEventListener('mouseup', function () {
+        dragging = false;
+        obstacle.style.cursor = 'grab';
+      });
+
+      // Initial render
+      onTextChange();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Basic Layout Demo — Pretext</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/shared.css" />
+    <style>
+      body {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+      }
+      h2 {
+        margin-top: 48px;
+        border-top: 1px solid var(--pt-border);
+        padding-top: 32px;
+      }
+
+      :root {
+        --pt-accent: #6b8cff;
+        --pt-accent-soft: rgba(107, 140, 255, 0.18);
+        --pt-success: #38d494;
+        --pt-success-soft: rgba(56, 212, 148, 0.16);
+      }
+
+      /* Screenshot-style docs UI (scoped to this page) */
+      .pt-doc {
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          'Apple Color Emoji',
+          'Segoe UI Emoji';
+      }
+
+      .pt-doc h2 {
+        margin-top: 28px;
+        border-top: 0;
+        padding-top: 0;
+        letter-spacing: -0.2px;
+      }
+
+      .pt-doc-header {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        justify-content: space-between;
+        margin-top: 48px;
+      }
+
+      .pt-doc-header h2 {
+        margin: 0;
+      }
+
+      .pt-doc-link {
+        font-size: 13px;
+        color: var(--pt-muted);
+        text-decoration: none;
+      }
+
+      .pt-doc-link:hover {
+        text-decoration: underline;
+      }
+
+      .pt-card {
+        border: 1px solid var(--pt-border-soft);
+        background: var(--pt-surface);
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      .pt-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0 14px;
+      }
+
+      .pt-chip {
+        appearance: none;
+        border: 1px solid var(--pt-border-soft);
+        background: transparent;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font:
+          600 12px/1.2 'JetBrains Mono',
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          'Liberation Mono',
+          'Courier New',
+          monospace;
+        color: var(--pt-fg);
+        cursor: pointer;
+      }
+
+      .pt-chip[aria-selected='true'] {
+        background: var(--pt-accent-soft);
+        border-color: rgba(107, 140, 255, 0.6);
+        color: var(--pt-fg-strong);
+      }
+
+      .pt-chip:focus-visible {
+        outline: 2px solid var(--pt-border-strong);
+        outline-offset: 2px;
+      }
+
+      .pt-signature {
+        margin: 0 0 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--pt-border-soft);
+        background: rgba(255, 255, 255, 0.02);
+        overflow-x: auto;
+        font:
+          13px/1.5 'JetBrains Mono',
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          'Liberation Mono',
+          'Courier New',
+          monospace;
+      }
+
+      .pt-signature code {
+        background: transparent;
+        padding: 0;
+      }
+
+      .pt-doc p {
+        margin: 8px 0;
+        color: var(--pt-fg);
+      }
+
+      .pt-doc .pt-muted {
+        color: var(--pt-muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .pt-param-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+        font-size: 13px;
+      }
+
+      .pt-param-table th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--pt-muted);
+        padding: 10px 0;
+        border-bottom: 1px solid var(--pt-border-soft);
+      }
+
+      .pt-param-table td {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--pt-border);
+        vertical-align: top;
+      }
+
+      .pt-type {
+        font-family:
+          'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
+          Consolas, 'Liberation Mono', 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--pt-fg-strong);
+      }
+
+      .pt-badge {
+        display: inline-block;
+        border: 1px solid var(--pt-border-soft);
+        background: var(--pt-surface-strong);
+        border-radius: 999px;
+        padding: 4px 10px;
+        font:
+          600 12px/1.2 'JetBrains Mono',
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          'Liberation Mono',
+          'Courier New',
+          monospace;
+      }
+
+      .pt-badge-success {
+        border-color: rgba(56, 212, 148, 0.6);
+        background: var(--pt-success-soft);
+      }
+
+      .pt-returns {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .pt-tryit {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 12px 0 6px;
+      }
+
+      .pt-tryit-input {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid var(--pt-border-soft);
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font:
+          13px/1.2 'JetBrains Mono',
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          'Liberation Mono',
+          'Courier New',
+          monospace;
+        color: var(--pt-fg);
+      }
+
+      .pt-tryit-input:focus {
+        outline: none;
+        border-color: var(--pt-border-strong);
+      }
+
+      .pt-tryit-button {
+        appearance: none;
+        border: 1px solid var(--pt-border-soft);
+        background: var(--pt-surface-strong);
+        color: var(--pt-fg);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font:
+          600 13px/1.1 Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .pt-tryit-button:hover {
+        border-color: var(--pt-border-strong);
+      }
+
+      .pt-tryit-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .pt-tryit-output {
+        font:
+          12px/1.4 'JetBrains Mono',
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          'Liberation Mono',
+          'Courier New',
+          monospace;
+        color: var(--pt-success);
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--pt-border-soft);
+        padding: 12px;
+        border-radius: 10px;
+        display: block;
+        margin-top: 8px;
+        white-space: pre-wrap;
+        min-height: 36px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav" aria-label="Demos">
+      <a href="index.html">Home</a>
+      <a href="pretext-api.html" aria-current="page">Api Reference</a>
+      <a href="pretext-in-action.html">Pretext In Action</a>
+      <a href="advanced-api.html">Advanced API</a>
+      <a href="ascii-particle-field.html">ASCII field</a>
+    </nav>
+
+    <h1>Pretext 101</h1>
+    <p>
+      Pretext is a JavaScript library for measuring and laying out text without
+      rendering it in the DOM. It’s fast, accurate, and easy to use.
+    </p>
+
+    <section class="pt-doc" aria-label="Pretext mental model and API reference">
+      <h2>Core Mental Model / API</h2>
+      <div class="pt-card">
+        <pre
+          class="pt-codeblock"
+        ><code>prepare() / prepareWithSegments()   →  expensive, doing the normalize whitespace, segments the text.
+layout() / layoutNextLine()         →  cheap arithmetic, run on every resize/frame, run to get the line height / width of the text. 
+
+Think of it like a database:
+
+prepare = write to cache (measure all segments via canvas)
+layout  = read from cache (pure math, no I/O)</code></pre>
+        <p class="pt-muted" style="margin: 10px 2px 0">
+          <strong>Rule of thumb:</strong> prepare once per text+font; layout as
+          often as you want.
+        </p>
+      </div>
+
+      <div class="pt-doc-header">
+        <h2 style="margin-top: 0">Common Functions</h2>
+      </div>
+
+      <div
+        class="pt-chip-row"
+        role="tablist"
+        aria-label="Functions"
+        data-pt-tablist
+      >
+        <button
+          class="pt-chip"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="pt-panel-prepare"
+          id="pt-tab-prepare"
+          data-pt-tab="prepare"
+        >
+          prepare()
+        </button>
+        <button
+          class="pt-chip"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="pt-panel-prepareWithSegments"
+          id="pt-tab-prepareWithSegments"
+          data-pt-tab="prepareWithSegments"
+        >
+          prepareWithSegments()
+        </button>
+        <button
+          class="pt-chip"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="pt-panel-layout"
+          id="pt-tab-layout"
+          data-pt-tab="layout"
+        >
+          layout()
+        </button>
+        <button
+          class="pt-chip"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="pt-panel-layoutNextLine"
+          id="pt-tab-layoutNextLine"
+          data-pt-tab="layoutNextLine"
+        >
+          layoutNextLine()
+        </button>
+      </div>
+
+      <div class="pt-card">
+        <!-- prepare() -->
+        <section
+          role="tabpanel"
+          id="pt-panel-prepare"
+          aria-labelledby="pt-tab-prepare"
+          data-pt-panel="prepare"
+        >
+          <pre
+            class="pt-signature"
+          ><code>prepare(text: string, font: string, options?: PrepareOptions): PreparedText</code></pre>
+          <p class="pt-muted">
+            Analyzes and measures text, caching glyph widths for fast subsequent
+            layout. The returned <span class="pt-type">PreparedText</span> is
+            opaque — pass it to <span class="pt-type">layout()</span>.
+          </p>
+
+          <table class="pt-param-table" aria-label="prepare parameters">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pt-type">text</span></td>
+                <td><span class="pt-type">string</span></td>
+                <td class="pt-muted">The text to prepare for layout.</td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">font</span></td>
+                <td><span class="pt-type">string</span></td>
+                <td class="pt-muted">
+                  CSS font shorthand (e.g., “16px Inter”).
+                </td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">options</span></td>
+                <td><span class="pt-type">PrepareOptions</span></td>
+                <td class="pt-muted">
+                  Optional. { <span class="pt-type">whiteSpace?</span>:
+                  <span class="pt-type">"normal" | "pre-wrap"</span> }
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="pt-returns">
+            <span class="pt-muted">Returns:</span>
+            <span class="pt-badge"
+              >PreparedText — opaque handle for use with layout()</span
+            >
+          </div>
+        </section>
+
+        <!-- prepareWithSegments() -->
+        <section
+          role="tabpanel"
+          id="pt-panel-prepareWithSegments"
+          aria-labelledby="pt-tab-prepareWithSegments"
+          data-pt-panel="prepareWithSegments"
+          hidden
+        >
+          <pre
+            class="pt-signature"
+          ><code>prepareWithSegments(text: string, font: string, options?: PrepareOptions): PreparedTextWithSegments</code></pre>
+          <p class="pt-muted">
+            Same as <span class="pt-type">prepare</span> but also stores segment
+            metadata. Required for <span class="pt-type">layoutNextLine</span>,
+            <span class="pt-type">materializeLineRange</span>, and
+            <span class="pt-type">walkLineRanges</span>.
+          </p>
+
+          <table
+            class="pt-param-table"
+            aria-label="prepareWithSegments parameters"
+          >
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pt-type">text</span></td>
+                <td><span class="pt-type">string</span></td>
+                <td class="pt-muted">
+                  The text to prepare for segmented layout.
+                </td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">font</span></td>
+                <td><span class="pt-type">string</span></td>
+                <td class="pt-muted">
+                  CSS font shorthand (e.g., “16px Inter”).
+                </td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">options</span></td>
+                <td><span class="pt-type">PrepareOptions</span></td>
+                <td class="pt-muted">
+                  Optional. { <span class="pt-type">whiteSpace?</span>:
+                  <span class="pt-type">"normal" | "pre-wrap"</span> }
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="pt-returns">
+            <span class="pt-muted">Returns:</span>
+            <span class="pt-badge"
+              >PreparedTextWithSegments — segments + widths cached</span
+            >
+          </div>
+
+          <pre
+            class="pt-codeblock"
+          ><code>const prepared = prepareWithSegments('Hello world', '16px Inter')
+// prepared.segments → ['Hello', ' ', 'world']
+// prepared.widths   → [37.5, 4.4, 28.1]</code></pre>
+        </section>
+
+        <!-- layout() -->
+        <section
+          role="tabpanel"
+          id="pt-panel-layout"
+          aria-labelledby="pt-tab-layout"
+          data-pt-panel="layout"
+          hidden
+        >
+          <pre
+            class="pt-signature"
+          ><code>layout(prepared: PreparedText, maxWidth: number, lineHeight: number): { height: number, lineCount: number }</code></pre>
+          <p class="pt-muted">
+            Pure arithmetic. Returns
+            <span class="pt-type">{ height, lineCount }</span> for a given
+            container width.
+          </p>
+
+          <table class="pt-param-table" aria-label="layout parameters">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pt-type">prepared</span></td>
+                <td><span class="pt-type">PreparedText</span></td>
+                <td class="pt-muted">Opaque handle created by prepare().</td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">maxWidth</span></td>
+                <td><span class="pt-type">number</span></td>
+                <td class="pt-muted">Maximum line width in pixels.</td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">lineHeight</span></td>
+                <td><span class="pt-type">number</span></td>
+                <td class="pt-muted">Line height in pixels.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="pt-returns">
+            <span class="pt-muted">Returns:</span>
+            <span class="pt-badge">{ height, lineCount } — summary stats</span>
+          </div>
+
+          <pre
+            class="pt-codeblock"
+          ><code>const { height, lineCount } = layout(prepared, 300, 24)
+// height    → total px height of the text block
+// lineCount → number of wrapped lines</code></pre>
+
+          <p class="pt-muted">
+            Call this on every resize — it’s essentially free.
+          </p>
+        </section>
+
+        <!-- layoutNextLine() -->
+        <section
+          role="tabpanel"
+          id="pt-panel-layoutNextLine"
+          aria-labelledby="pt-tab-layoutNextLine"
+          data-pt-panel="layoutNextLine"
+          hidden
+        >
+          <pre
+            class="pt-signature"
+          ><code>layoutNextLine(prepared: PreparedTextWithSegments, cursor: LayoutCursor, maxWidth: number): { text: string, width: number, end: LayoutCursor } | null</code></pre>
+          <p class="pt-muted">
+            Walks one line at a time from the given cursor. Returns
+            <span class="pt-type">{ text, width, end }</span> or
+            <span class="pt-type">null</span>
+            when all lines are consumed.
+          </p>
+
+          <table class="pt-param-table" aria-label="layoutNextLine parameters">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pt-type">prepared</span></td>
+                <td><span class="pt-type">PreparedTextWithSegments</span></td>
+                <td class="pt-muted">
+                  Prepared handle created by prepareWithSegments().
+                </td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">cursor</span></td>
+                <td><span class="pt-type">LayoutCursor</span></td>
+                <td class="pt-muted">
+                  Current cursor (segment + grapheme offset).
+                </td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">maxWidth</span></td>
+                <td><span class="pt-type">number</span></td>
+                <td class="pt-muted">Maximum line width in pixels.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="pt-returns">
+            <span class="pt-muted">Returns:</span>
+            <span class="pt-badge"
+              >{ text, width, end } | null — one line at a time</span
+            >
+          </div>
+
+          <pre
+            class="pt-codeblock"
+          ><code>let cursor = { segmentIndex: 0, graphemeIndex: 0 }
+
+while (true) {
+  const line = layoutNextLine(prepared, cursor, maxWidth)
+  if (!line) break         // null = all lines consumed
+
+  console.log(line.text)   // string content of this line
+  console.log(line.width)  // measured pixel width
+
+  cursor = line.end        // LayoutCursor for next line
+}</code></pre>
+
+          <p class="pt-muted">
+            <span class="pt-type">cursor</span> is a
+            <span class="pt-type">LayoutCursor</span>:
+          </p>
+          <pre class="pt-codeblock"><code>type LayoutCursor = {
+  segmentIndex: number    // which segment in prepared.segments
+  graphemeIndex: number   // which character within that segment (non-zero only for mid-word breaks)
+}</code></pre>
+        </section>
+      </div>
+    </section>
+
+    <h2>Usage API</h2>
+
+    <div class="pt-card">
+      <div style="display: flex; gap: 14px; flex-wrap: wrap">
+        <div style="flex: 1; min-width: 260px">
+          <h3 style="margin: 0 0 6px">Fast Path</h3>
+          <p class="pt-muted">
+            Use <span class="pt-type">prepare()</span> then
+            <span class="pt-type">layout()</span> to get height and line count.
+          </p>
+
+          <label style="display: block; margin: 8px 0">Text</label>
+          <textarea
+            data-fast-text
+            class="pt-tryit-input"
+            rows="3"
+            style="
+              width: 100%;
+              box-sizing: border-box;
+              padding: 8px;
+              font: inherit;
+            "
+          >
+The web has always forced you to render text into the DOM just to learn how tall it is.</textarea
+          >
+
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              margin-top: 8px;
+              align-items: center;
+            "
+          >
+            <label style="flex: 1"
+              >Width
+              <input
+                data-fast-width
+                class="pt-tryit-input"
+                type="number"
+                min="50"
+                max="2000"
+                value="360"
+                style="width: 100%"
+            /></label>
+            <label style="width: 120px"
+              >Line height
+              <input
+                data-fast-lh
+                class="pt-tryit-input"
+                type="number"
+                min="8"
+                max="200"
+                value="24"
+                style="width: 100%"
+            /></label>
+          </div>
+
+          <div style="margin-top: 10px">
+            <div style="display: inline-block">
+              <button data-fast-run class="pt-tryit-button">
+                Run Fast Path
+              </button>
+            </div>
+            <div data-fast-output class="pt-tryit-output">—</div>
+          </div>
+        </div>
+
+        <div style="flex: 1; min-width: 260px">
+          <h3 style="margin: 0 0 6px">Iterator Path</h3>
+          <p class="pt-muted">
+            Use <span class="pt-type">prepareWithSegments()</span> and
+            <span class="pt-type">layoutNextLine()</span> to walk lines.
+          </p>
+
+          <label style="display: block; margin: 8px 0">Text</label>
+          <textarea
+            data-iter-text
+            class="pt-tryit-input"
+            rows="3"
+            style="
+              width: 100%;
+              box-sizing: border-box;
+              padding: 8px;
+              font: inherit;
+            "
+          >
+The web has always forced you to render text into the DOM just to learn how tall it is.</textarea
+          >
+
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              margin-top: 8px;
+              align-items: center;
+            "
+          >
+            <label style="flex: 1"
+              >Width
+              <input
+                data-iter-width
+                class="pt-tryit-input"
+                type="number"
+                min="50"
+                max="2000"
+                value="360"
+                style="width: 100%"
+            /></label>
+            <label style="width: 120px"
+              >Line height
+              <input
+                data-iter-lh
+                class="pt-tryit-input"
+                type="number"
+                min="8"
+                max="200"
+                value="24"
+                style="width: 100%"
+            /></label>
+          </div>
+
+          <div style="margin-top: 10px">
+            <div style="display: inline-block">
+              <button data-iter-run class="pt-tryit-button">
+                Run Iterator Path
+              </button>
+            </div>
+            <div data-iter-output class="pt-tryit-output">—</div>
+          </div>
+        </div>
+      </div>
+
+      <hr
+        style="
+          margin: 14px 0;
+          border: none;
+          border-top: 1px solid var(--pt-border);
+        "
+      />
+      <div class="pt-doc-link" style="font-size: 13px">
+        Examples:
+        <div style="margin-top: 6px" class="pt-codeblock">
+          import {prepare, layout, prepareWithSegments, layoutNextLine} from
+          '@chenglou/pretext';
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {
+        prepare,
+        prepareWithSegments,
+        layout,
+        layoutNextLine,
+      } from '@chenglou/pretext';
+
+      const tabList = document.querySelector('[data-pt-tablist]');
+      const tabs = Array.from(document.querySelectorAll('[data-pt-tab]'));
+      const panels = Array.from(document.querySelectorAll('[data-pt-panel]'));
+
+      function setActiveTab(name, { updateHash = true } = {}) {
+        for (const tab of tabs) {
+          const isActive = tab.dataset.ptTab === name;
+          tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          tab.tabIndex = isActive ? 0 : -1;
+        }
+        for (const panel of panels) {
+          panel.hidden = panel.dataset.ptPanel !== name;
+        }
+        if (updateHash) {
+          history.replaceState(null, '', `#${name}`);
+        }
+      }
+
+      tabList?.addEventListener('click', (e) => {
+        const target = e.target instanceof HTMLElement ? e.target : null;
+        const tab = target?.closest?.('[data-pt-tab]');
+        if (!(tab instanceof HTMLButtonElement)) return;
+        setActiveTab(tab.dataset.ptTab);
+      });
+
+      // Initialize from hash (e.g. #layoutNextLine)
+      const initial = location.hash.replace(/^#/, '');
+      if (initial && tabs.some((t) => t.dataset.ptTab === initial)) {
+        setActiveTab(initial, { updateHash: false });
+      } else {
+        setActiveTab('prepare', { updateHash: false });
+      }
+
+      // Fast Path UI wiring
+      const fastText = document.querySelector('[data-fast-text]');
+      const fastWidth = document.querySelector('[data-fast-width]');
+      const fastLh = document.querySelector('[data-fast-lh]');
+      const fastRun = document.querySelector('[data-fast-run]');
+      const fastOutput = document.querySelector('[data-fast-output]');
+
+      async function runFastPath() {
+        if (!(fastRun instanceof HTMLButtonElement)) return;
+        if (!(fastText instanceof HTMLTextAreaElement)) return;
+        if (!(fastWidth instanceof HTMLInputElement)) return;
+        if (!(fastLh instanceof HTMLInputElement)) return;
+        if (!(fastOutput instanceof HTMLElement)) return;
+
+        const text = fastText.value;
+        const font = '16px Inter';
+        const maxWidth = Number(fastWidth.value);
+        const lineHeight = Number(fastLh.value);
+
+        fastRun.disabled = true;
+        fastOutput.textContent = 'Running…';
+        try {
+          await document.fonts.ready;
+          await document.fonts.load(font);
+
+          const t0 = performance.now();
+          const prepared = prepare(text, font);
+          const t1 = performance.now();
+
+          const t2 = performance.now();
+          const res = layout(prepared, maxWidth, lineHeight);
+          const t3 = performance.now();
+
+          fastOutput.innerHTML = `<pre class="pt-codeblock"><code>layout(prepared, ${maxWidth}, ${lineHeight})\nResult: ${JSON.stringify(res, null, 2)}</code></pre>`;
+        } catch (err) {
+          fastOutput.innerHTML = `<div style="color:#ff8080">Error: ${err instanceof Error ? err.message : String(err)}</div>`;
+        } finally {
+          fastRun.disabled = false;
+        }
+      }
+
+      fastRun?.addEventListener('click', runFastPath);
+
+      // Iterator Path UI wiring
+      const iterText = document.querySelector('[data-iter-text]');
+      const iterWidth = document.querySelector('[data-iter-width]');
+      const iterLh = document.querySelector('[data-iter-lh]');
+      const iterRun = document.querySelector('[data-iter-run]');
+      const iterOutput = document.querySelector('[data-iter-output]');
+
+      async function runIteratorPath() {
+        if (!(iterRun instanceof HTMLButtonElement)) return;
+        if (!(iterText instanceof HTMLTextAreaElement)) return;
+        if (!(iterWidth instanceof HTMLInputElement)) return;
+        if (!(iterLh instanceof HTMLInputElement)) return;
+        if (!(iterOutput instanceof HTMLElement)) return;
+
+        const text = iterText.value;
+        const font = '16px Inter';
+        const maxWidth = Number(iterWidth.value);
+        const lineHeight = Number(iterLh.value);
+
+        iterRun.disabled = true;
+        iterOutput.textContent = 'Running…';
+        try {
+          await document.fonts.ready;
+          await document.fonts.load(font);
+
+          const t0 = performance.now();
+          const prepared = prepareWithSegments(text, font);
+          const t1 = performance.now();
+
+          let cursor = { segmentIndex: 0, graphemeIndex: 0 };
+          const lines = [];
+          const t2 = performance.now();
+          while (true) {
+            const line = layoutNextLine(prepared, cursor, maxWidth);
+            if (!line) break;
+            lines.push({ text: line.text, width: line.width });
+            cursor = line.end;
+          }
+          const t3 = performance.now();
+
+          const totalHeight = lines.length * lineHeight;
+          const linesText = lines
+            .map((l, i) => `L${i + 1}\t(${l.width.toFixed(1)}px)\t${l.text}`)
+            .join('\n');
+          iterOutput.innerHTML = `<pre class="pt-codeblock"><code>LayoutNextLine(prepared, cursor, ${maxWidth}) in a loop\n\n${linesText}\n\nResult: ${JSON.stringify({ lineCount: lines.length, height: totalHeight }, null, 2)}</code></pre>`;
+        } catch (err) {
+          iterOutput.innerHTML = `<div style="color:#ff8080">Error: ${err instanceof Error ? err.message : String(err)}</div>`;
+        } finally {
+          iterRun.disabled = false;
+        }
+      }
+
+      iterRun?.addEventListener('click', runIteratorPath);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pretext Demos</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/shared.css" />
+    <style>
+      body {
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      .grid {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .card {
+        border: 1px solid var(--pt-border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        background: var(--pt-surface);
+      }
+      .card a {
+        color: inherit;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .card a:hover {
+        text-decoration: underline;
+      }
+      .muted {
+        color: var(--pt-muted);
+        font-size: 14px;
+        margin: 6px 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav" aria-label="Demos">
+      <a href="./index.html" aria-current="page">Home</a>
+      <a href="./pretext-api.html">Api Reference</a>
+      <a href="./advanced-api.html">Advanced API</a>
+      <a href="./pretext-in-action.html">Pretext In Action</a>
+      <a href="./ascii-particle-field.html">ASCII Field</a>
+    </nav>
+
+    <h1 style="margin: 0 0 8px">Pretext demos</h1>
+    <p class="muted">
+      Pretext playground and demo pages. Each page demonstrates different
+      aspects of Pretext's
+      <code>@chenglou/pretext</code> import works.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <a href="./pretext-api.html">Api Reference</a>
+        <p class="muted">Detailed API documentation for Pretext.</p>
+      </div>
+      <div class="card">
+        <a href="./pretext-in-action.html">Pretext In Action</a>
+        <p class="muted">
+          Accordion, virtualized list, and “show more” clamping.
+        </p>
+      </div>
+      <div class="card">
+        <a href="./advanced-api.html">Advanced API</a>
+        <p class="muted">
+          Canvas lines, shrink-wrapped bubbles, and obstacle flow.
+        </p>
+      </div>
+      <div class="card">
+        <a href="./ascii-particle-field.html">ASCII Field</a>
+        <p class="muted">
+          Animated ASCII particle field; uses Pretext-measured character widths.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
