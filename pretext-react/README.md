@@ -1,4 +1,4 @@
-# bun-react-tailwind-shadcn-template
+# Pretext React
 
 To install dependencies:
 
