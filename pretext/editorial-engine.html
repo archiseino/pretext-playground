@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editorial Text Wrap</title>
+    <link rel="stylesheet" href="src/shared.css" />
+  </head>
+  <body>
+    <nav class="nav" aria-label="Demos">
+      <a href="./index.html">Home</a>
+      <a href="./pretext-api.html">Api Reference</a>
+      <a href="./advanced-api.html">Advanced API</a>
+      <a href="./pretext-in-action.html">Pretext In Action</a>
+      <a href="./ascii-particle-field.html">ASCII Field</a>
+      <a href="./editorial-engine.html" aria-current="page">Editorial Engine</a>
+      <a href="rain-text.html">Rain Text</a>
+    </nav>
+    <h2 class="sr-only">
+      DOM-based editorial text wrap around a draggable circle — single side and
+      both sides
+    </h2>
+    <style>
+      .panels {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      .col {
+        flex: 1;
+        min-width: 0;
+      }
+      .col-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin: 0 0 2px;
+      }
+      .col-sub {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        font-family: var(--font-mono);
+        margin: 0 0 6px;
+      }
+      .stage {
+        position: relative;
+        height: 380px;
+        border: 0.5px solid var(--color-border-tertiary);
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: grab;
+        user-select: none;
+      }
+      .stage.g {
+        cursor: grabbing;
+      }
+      .circle {
+        position: absolute;
+        border-radius: 50%;
+        border: 1.5px solid #185fa5;
+        background: rgba(24, 95, 165, 0.08);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+      .dot {
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #378add;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+      .row {
+        position: absolute;
+        overflow: hidden;
+        white-space: nowrap;
+        font:
+          13px Georgia,
+          serif;
+        line-height: 20px;
+        color: var(--color-text-primary);
+      }
+    </style>
+
+    <div class="panels">
+      <div class="col">
+        <p class="col-title">Single-side wrap</p>
+        <p class="col-sub">one cursor · left or right</p>
+        <div class="stage" id="s1">
+          <div class="circle" id="circ1"></div>
+          <div class="dot" id="dot1"></div>
+          <div id="rows1"></div>
+        </div>
+      </div>
+      <div class="col">
+        <p class="col-title">Both-sides wrap</p>
+        <p class="col-sub">two cursors · chord per line</p>
+        <div class="stage" id="s2">
+          <div class="circle" id="circ2"></div>
+          <div class="dot" id="dot2"></div>
+          <div id="rows2"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { prepareWithSegments, layoutNextLine } from '@chenglou/pretext';
+
+      const TEXT =
+        'Typography is the art and technique of arranging type to make written language legible, readable, and appealing when displayed. The arrangement of type involves selecting typefaces, point sizes, line lengths, line-spacing, and letter-spacing, as well as adjusting the space between pairs of letters. The term typography is also applied to the style, arrangement, and appearance of the letters, numbers, and symbols created by the process. Type design is a closely related craft, sometimes considered part of typography. Digitization opened up typography to new generations of previously unrelated designers and lay users. As the capability to create typography has become ubiquitous, the application of principles and best practices developed over generations of skilled workers and professionals has diminished.';
+
+      const FONT = '13px Georgia,serif',
+        LH = 20,
+        PAD = 12,
+        GAP = 7,
+        H = 380;
+
+      await document.fonts.ready;
+      const prep = prepareWithSegments(TEXT, FONT);
+
+      function makeStage(
+        stageId,
+        circId,
+        dotId,
+        rowsId,
+        initXRatio,
+        initY,
+        renderFn,
+      ) {
+        const stage = document.getElementById(stageId);
+        const circEl = document.getElementById(circId);
+        const dotEl = document.getElementById(dotId);
+        const rowsEl = document.getElementById(rowsId);
+
+        // Setup the width, initial circle position, and drag state
+        let width = stage.clientWidth;
+
+        // Definition of circle for initial just random value, the value of the center define when click the event mouse click
+        let centerX = width * initXRatio,
+          centerY = initY,
+          radius = 62;
+        let drag = false,
+          offsetX = 0,
+          offsetY = 0;
+
+        function posCircle() {
+          circEl.style.left = centerX + 'px';
+          circEl.style.top = centerY + 'px';
+          circEl.style.width = radius * 2 + 'px';
+          circEl.style.height = radius * 2 + 'px';
+          dotEl.style.left = centerX + 'px';
+          dotEl.style.top = centerY + 'px';
+        }
+
+        function render() {
+          width = stage.clientWidth;
+          posCircle();
+          const lines = renderFn(width, H, centerX, centerY, radius);
+
+          // recycle DOM rows — reuse existing divs, create/remove as needed
+          const existing = rowsEl.children;
+          let i = 0;
+          for (const seg of lines) {
+            let row = existing[i];
+            if (!row) {
+              row = document.createElement('div');
+              row.className = 'row';
+              rowsEl.appendChild(row);
+            }
+            row.textContent = seg.text;
+            row.style.top = seg.top + 'px';
+            row.style.left = seg.left + 'px';
+            row.style.width = seg.width + 'px';
+            i++;
+          }
+          // remove extras
+          while (rowsEl.children.length > i) rowsEl.lastChild.remove();
+        }
+
+        function getXY(e) {
+          const rc = stage.getBoundingClientRect(),
+            s = e.touches ? e.touches[0] : e; // Getting the event
+          return { x: s.clientX - rc.left, y: s.clientY - rc.top }; // Returning the X,Y mouse coordinate relative to the stage container
+        }
+
+        // Event mouse down (when user click the container / stage)
+        stage.addEventListener('mousedown', (e) => {
+          const p = getXY(e),
+            // Getting the relatives distance from the mouse click to the center of the circle
+            dx = p.x - centerX,
+            dy = p.y - centerY;
+          if (Math.sqrt(dx * dx + dy * dy) < radius) {
+            // X^2 + Y^2 < R^2 → within circle
+            drag = true;
+
+            // Make sure the offset is the distance to the circle
+            offsetX = dx;
+            offsetY = dy;
+            stage.classList.add('g');
+          }
+        });
+
+        // Event mouse move (when user moves the mouse) the container
+        stage.addEventListener('mousemove', (e) => {
+          if (!drag) return;
+          const p = getXY(e);
+
+          // The value should the in interval radius < p.x-offset < width-radius to renew the centerX and Y
+          centerX = Math.max(radius, Math.min(width - radius, p.x - offsetX));
+          centerY = Math.max(radius, Math.min(H - radius, p.y - offsetY));
+          render();
+        });
+        stage.addEventListener('mouseup', () => {
+          drag = false;
+          stage.classList.remove('g');
+        });
+        stage.addEventListener('mouseleave', () => {
+          drag = false;
+          stage.classList.remove('g');
+        });
+
+        const ro = new ResizeObserver(() => render());
+        ro.observe(stage);
+        render();
+      }
+
+      // ── single-side render: one cursor, one row per line ──
+      function renderSingle(width, height, centerX, centerY, radius) {
+        const columnWidth = width - PAD * 2;
+        const isLeft = centerX < width / 2; // For single render text flag
+        let cur = { segmentIndex: 0, graphemeIndex: 0 },
+          y = PAD;
+        const out = [];
+        while (y < height) {
+          const top = y,
+            bot = y + LH;
+          // Check if the line overlaps with the circle vertically
+          const overlap = bot > centerY - radius && top < centerY + radius;
+          let left, width;
+          if (!overlap) {
+            left = PAD;
+            width = columnWidth;
+          } else if (isLeft) {
+            left = centerX + radius + GAP;
+            width = PAD + columnWidth - left;
+          } else {
+            left = PAD;
+            width = centerX - radius - PAD - GAP;
+          }
+          width = Math.max(18, width);
+          const line = layoutNextLine(prep, cur, width);
+          if (!line) break;
+          // one div per line — left and width set per Pretext output
+          out.push({ text: line.text, top: y, left, width });
+          cur = line.end;
+          y += LH;
+        }
+        return out;
+      }
+
+      function renderBoth(width, height, centerX, centerY, radius) {
+        const columnWidth = width - PAD * 2;
+        const cursor = { segmentIndex: 0, graphemeIndex: 0 };
+        const out = [];
+        let y = PAD;
+
+        // helper — push a line segment to output
+        function pushLine(line, left, width) {
+          out.push({
+            text: line.text,
+            top: y,
+            left: Math.round(left),
+            width: Math.round(width),
+          });
+          cursor.segmentIndex = line.end.segmentIndex;
+          cursor.graphemeIndex = line.end.graphemeIndex;
+        }
+
+        // helper — get circle's horizontal extent at this Y slice (chord math)
+        function getChord() {
+          const dy = y + LH / 2 - centerY; // distance from line mid to circle center
+          const inY = Math.abs(dy) < radius; // Check if the line overlaps with the circle vertically
+          const half = inY
+            ? Math.sqrt(Math.max(0, radius * radius - dy * dy))
+            : 0;
+          return {
+            inY,
+            circleLeft: centerX - half, // left edge of circle at this Y
+            circleRight: centerX + half, // right edge of circle at this Y
+          };
+        }
+
+        while (y < height) {
+          const { inY, circleLeft, circleRight } = getChord();
+          const leftWidth = Math.max(0, circleLeft - PAD - GAP);
+          const rightWidth = Math.max(0, PAD + columnWidth - circleRight - GAP);
+          const bothSides = inY && leftWidth > 26 && rightWidth > 26;
+
+          if (!inY) {
+            // no obstacle — full width line
+            const line = layoutNextLine(prep, cursor, columnWidth);
+            if (!line) break;
+            pushLine(line, PAD, columnWidth);
+          } else if (bothSides) {
+            // obstacle in middle — fill left then right with one cursor
+            const lineLeft = layoutNextLine(prep, cursor, leftWidth);
+            if (!lineLeft) break;
+            pushLine(lineLeft, PAD, leftWidth);
+
+            const lineRight = layoutNextLine(prep, cursor, rightWidth);
+            if (lineRight) pushLine(lineRight, circleRight + GAP, rightWidth);
+          } else if (leftWidth > 26) {
+            // only left side has space
+            const line = layoutNextLine(prep, cursor, leftWidth);
+            if (!line) break;
+            pushLine(line, PAD, leftWidth);
+          } else if (rightWidth > 26) {
+            // only right side has space
+            const line = layoutNextLine(prep, cursor, rightWidth);
+            if (!line) break;
+            pushLine(line, circleRight + GAP, rightWidth);
+          }
+
+          y += LH;
+        }
+
+        return out;
+      }
+      makeStage('s1', 'circ1', 'dot1', 'rows1', 0.35, 130, renderSingle);
+      makeStage('s2', 'circ2', 'dot2', 'rows2', 0.5, 130, renderBoth);
+    </script>
+  </body>
+</html>

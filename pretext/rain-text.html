@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rain Text</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/shared.css" />
+    <style>
+      #stage {
+        position: relative;
+        width: 100%;
+        border: 0.5px solid var(--pt-border);
+        overflow: hidden;
+        background: #0a0e14;
+        min-height: 400px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      #controls label {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #controls input[type='range'] {
+        width: 100px;
+      }
+      #stats {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--color-text-tertiary);
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav" aria-label="Demos">
+      <a href="index.html">Home</a>
+      <a href="pretext-api.html">Api Reference</a>
+      <a href="pretext-in-action.html">Pretext In Action</a>
+      <a href="advanced-api.html">Advanced API</a>
+      <a href="ascii-particle-field.html" aria-current="page">ASCII field</a>
+      <a href="editorial-engine.html">Editorial Engine</a>
+    </nav>
+    <h1 class="sr-only">Raining Text Field</h1>
+    <p>
+      A rain of words that deflects around a draggable parasol. Each word is
+      measured with Pretext for accurate column spacing. The parasol's dome and
+      stick block and deflect falling words, creating a dynamic interaction
+      between the text and the umbrella.
+    </p>
+
+    <div id="stage"><canvas id="c"></canvas></div>
+    <div id="stats" id="st">
+      move the parasol · pretext measures each glyph for column spacing
+    </div>
+
+    <script type="module">
+      import { prepareWithSegments } from '@chenglou/pretext';
+
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+      const stage = document.getElementById('stage');
+
+      const CHARS =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+      const GREEN = [
+        '#00ff41',
+        '#00cc33',
+        '#00aa22',
+        '#008811',
+        '#00ff88',
+        '#39ff14',
+        '#00e5ff',
+      ];
+
+      let FONT = "13px 'JetBrains Mono',monospace";
+      let fontSize = 13;
+      let width,
+        height,
+        drops = [],
+        charWidths = new Map(),
+        averageWidth = 8;
+
+      // Setup the parasol object
+      let parasol = { x: 0, y: 0, r: 50, stickH: 90 }; // StickH means how long the stick is below the dome
+      let drag = false,
+        offsetX = 0,
+        offsetY = 0;
+      let rafId = null; // for canceling animation frame on resize
+
+      async function measureChars() {
+        await document.fonts.ready;
+        // measure each char width via pretext for
+        // accurate column spacing and parasol collision
+        charWidths.clear(); // Clear the collection of chars
+        let total = 0;
+        for (const char of CHARS) {
+          const prepared = prepareWithSegments(char, FONT);
+          const width =
+            prepared.widths && prepared.widths.length > 0
+              ? prepared.widths[0]
+              : fontSize * 0.6;
+          charWidths.set(char, width);
+          total += width;
+        }
+
+        averageWidth = total / CHARS.length; // Calculate the average width of the chars for column spacing and parasol collision
+        document.getElementById('stats').textContent =
+          `pretext measured ${CHARS.length} chars · avg width: ${averageWidth.toFixed(1)}px · ${drops.length} active drops`;
+      }
+
+      function randChar() {
+        return CHARS[Math.floor(Math.random() * CHARS.length)];
+      }
+      function randColor() {
+        return GREEN[Math.floor(Math.random() * GREEN.length)];
+      }
+
+      function initialDrops() {
+        if (!width) return; // Ensure width is defined before initializing drops
+        const cols = Math.floor(width / averageWidth);
+        // Setup up the drops keywords / setup the array of obj of drops
+        drops = Array.from({ length: cols }, (_, i) => ({
+          x: i * averageWidth,
+          y: Math.random() * -height,
+          char: randChar(),
+          color: randColor(),
+          speed: 0.8 + Math.random() * 1.4,
+          opacity: 0.4 + Math.random() * 0.6,
+          fontSize: 10 + Math.floor(Math.random() * 14), // ← 10px to 24px
+          trailLen: 4 + Math.floor(Math.random() * 8), // ← 4 to 12 trail chars
+          trail: [],
+        }));
+      }
+
+      function resize() {
+        const dpr = devicePixelRatio || 1;
+        const rect = stage.getBoundingClientRect(); // Get the container rect pos
+        width = rect.width;
+        height = Math.min(420, window.innerHeight * 0.55);
+        stage.style.height = height + 'px';
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+        parasol.x = width / 2;
+        parasol.y = height * 0.38;
+        parasol.r = Math.min(width, height) * 0.1 + 30;
+        parasol.stickH = parasol.r * 1.4;
+        initialDrops();
+      }
+
+      // Create deflecting mechanism for parasol
+      // function deflectDrop(drop) {
+      //   const dx = drop.x - parasol.x; // X pos differential from parasol
+      //   const dy = drop.y - parasol.y; // Y pos differential from parasol
+      //   const dist = Math.sqrt(dx * dx + dy * dy); // Distance from parasol
+      //   if (dist < parasol.r + averageWidth) {
+      //     // If within range of paras
+      //     const angle = Math.atan2(dy, dx);
+      //     const push = parasol.r + averageWidth * 1.2 - dist; // How much to push the drop out of the parasol
+      //     drop.x += Math.cos(angle) * push * 0.4; // Push the drop position respect to the parasol
+      //   }
+      //   const stickWidth = 4;
+      //   // Checker if the drop is within dome, push to the side
+      //   if (
+      //     drop.x > parasol.x - stickWidth - averageWidth &&
+      //     drop.x < parasol.x + stickWidth + averageWidth &&
+      //     drop.y > parasol.y &&
+      //     drop.y < parasol.y + parasol.stickH
+      //   ) {
+      //     drop.x +=
+      //       drop.x < parasol.x ? -(averageWidth * 1.5) : averageWidth * 1.5; // Push the drop out of the stick area
+      //   }
+      // }
+
+      // function drawParasol() {
+      //   const { x, y, r, stickH } = parasol;
+
+      //   // dome arc
+      //   ctx.beginPath();
+      //   ctx.arc(x, y, r, Math.PI, 0, false);
+      //   ctx.strokeStyle = 'rgba(100,180,255,0.7)';
+      //   ctx.lineWidth = 2;
+      //   ctx.stroke();
+
+      //   // dome fill subtle
+      //   ctx.beginPath();
+      //   ctx.arc(x, y, r, Math.PI, 0, false);
+      //   ctx.lineTo(x, y);
+      //   ctx.closePath();
+      //   ctx.fillStyle = 'rgba(20,60,120,0.25)';
+      //   ctx.fill();
+
+      //   // ribs
+      //   ctx.strokeStyle = 'rgba(100,180,255,0.35)';
+      //   ctx.lineWidth = 1;
+      //   for (let a = 0; a <= 180; a += 30) {
+      //     const rad = (a * Math.PI) / 180;
+      //     ctx.beginPath();
+      //     ctx.moveTo(x, y);
+      //     ctx.lineTo(
+      //       x + Math.cos(Math.PI - rad) * r,
+      //       y + Math.sin(Math.PI - rad) * r,
+      //     );
+      //     ctx.stroke();
+      //   }
+
+      //   // stick
+      //   ctx.beginPath();
+      //   ctx.moveTo(x, y);
+      //   ctx.lineTo(x, y + stickH);
+      //   ctx.strokeStyle = 'rgba(140,200,255,0.6)';
+      //   ctx.lineWidth = 3;
+      //   ctx.stroke();
+
+      //   // handle
+      //   ctx.beginPath();
+      //   ctx.arc(x, y + stickH, 6, 0, Math.PI * 2);
+      //   ctx.strokeStyle = 'rgba(140,200,255,0.6)';
+      //   ctx.lineWidth = 2;
+      //   ctx.stroke();
+
+      //   // dot center
+      //   ctx.beginPath();
+      //   ctx.arc(x, y, 3, 0, Math.PI * 2);
+      //   ctx.fillStyle = 'rgba(150,210,255,0.8)';
+      //   ctx.fill();
+      // }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Setup the background
+        ctx.fillStyle = 'rgba(10,14,20,0.92)';
+        ctx.fillRect(0, 0, width, height);
+
+        // drawParasol();
+
+        ctx.font = FONT;
+        ctx.textBaseline = 'top';
+
+        for (const drop of drops) {
+          drop.y += drop.speed;
+
+          const fSize = drop.fontSize;
+          const font = `${fSize}px "JetBrains Mono", monospace`;
+
+          // trail — dimming chars above
+          for (let t = 1; t <= drop.trailLen; t++) {
+            const ty = drop.y - t * fSize * 1.1;
+            if (ty < 0) continue;
+            const alpha = (1 - t / drop.trailLen) * 0.35 * drop.opacity;
+            if (alpha <= 0) continue;
+            ctx.font = font;
+            ctx.fillStyle = `rgba(0, 200, 60, ${alpha})`;
+            ctx.fillText(drop.char, drop.x, ty);
+          }
+
+          // head char — bright white flash
+          ctx.font = `bold ${fSize + 2}px "JetBrains Mono", monospace`;
+          ctx.fillStyle = `rgba(220, 255, 220, ${drop.opacity})`; // near-white
+          ctx.globalAlpha = drop.opacity;
+          ctx.fillText(drop.char, drop.x, drop.y);
+          ctx.globalAlpha = 1;
+
+          // reset
+          if (drop.y > height + fSize) {
+            drop.y = -fSize;
+            drop.x = Math.round(drop.x / averageWidth) * averageWidth;
+            drop.char = randChar();
+            drop.color = randColor();
+            drop.fontSize = 10 + Math.floor(Math.random() * 14); // re-randomize size
+            drop.trailLen = 4 + Math.floor(Math.random() * 8);
+          }
+
+          if (Math.random() < 0.02) drop.char = randChar();
+        }
+        rafId = requestAnimationFrame(animate);
+      }
+      // drag parasol
+      function getXY(e) {
+        const r = stage.getBoundingClientRect(),
+          s = e.touches ? e.touches[0] : e;
+        return { x: s.clientX - r.left, y: s.clientY - r.top };
+      }
+
+      const ro = new ResizeObserver(() => {
+        cancelAnimationFrame(rafId);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        resize();
+        animate();
+      });
+      ro.observe(stage);
+
+      resize();
+      await measureChars();
+      animate();
+    </script>
+  </body>
+</html>

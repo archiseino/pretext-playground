@@ -310,6 +310,9 @@
       <a href="pretext-in-action.html">Pretext In Action</a>
       <a href="advanced-api.html">Advanced API</a>
       <a href="ascii-particle-field.html">ASCII field</a>
+      <a href="editorial-engine.html">Editorial Engine</a>
+            <a href="rain-text.html">Rain Text</a>
+
     </nav>
 
     <h1>Pretext 101</h1>
@@ -389,6 +392,17 @@ layout  = read from cache (pure math, no I/O)</code></pre>
           data-pt-tab="layoutNextLine"
         >
           layoutNextLine()
+        </button>
+        <button
+          class="pt-chip"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="pt-panel-walkLineRanges"
+          id="pt-tab-walkLineRanges"
+          data-pt-tab="walkLineRanges"
+        >
+          walkLineRanges()
         </button>
       </div>
 
@@ -657,7 +671,59 @@ while (true) {
   graphemeIndex: number   // which character within that segment (non-zero only for mid-word breaks)
 }</code></pre>
         </section>
+      
+        <!-- walkLineRanges() -->
+        <section
+          role="tabpanel"
+          id="pt-panel-walkLineRanges"
+          aria-labelledby="pt-tab-walkLineRanges"
+          data-pt-panel="walkLineRanges"
+          hidden
+        >
+          <pre
+            class="pt-signature"
+          ><code>walkLineRanges(prepared: PreparedTextWithSegments, maxWidth: number, callback: (line: { text: string, width: number, start: LayoutCursor, end: LayoutCursor }) => void): void</code></pre>
+          <p class="pt-muted">
+            Walks lines from the start, invoking the callback with line content,
+            width, and start/end cursors.
+          </p>
+          <table class="pt-param-table" aria-label="walkLineRanges parameters">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pt-type">prepared</span></td>
+                <td><span class="pt-type">PreparedTextWithSegments</span></td>
+                <td class="pt-muted">
+                  Prepared handle created by prepareWithSegments().
+                </td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">maxWidth</span></td>
+                <td><span class="pt-type">number</span></td>
+                <td class="pt-muted">Maximum line width in pixels.</td>
+              </tr>
+              <tr>
+                <td><span class="pt-type">callback</span></td>
+                <td><span class="pt-type">function</span></td>
+                <td class="pt-muted">
+                  Invoked for each line with content, width, and cursors.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pt-returns">
+            <span class="pt-muted">Returns:</span>
+            <span class="pt-badge"
+              >void — callback invoked for each line</span>
       </div>
+      </section>
+
     </section>
 
     <h2>Usage API</h2>
@@ -767,17 +833,6 @@ The web has always forced you to render text into the DOM just to learn how tall
                 min="50"
                 max="2000"
                 value="360"
-                style="width: 100%"
-            /></label>
-            <label style="width: 120px"
-              >Line height
-              <input
-                data-iter-lh
-                class="pt-tryit-input"
-                type="number"
-                min="8"
-                max="200"
-                value="24"
                 style="width: 100%"
             /></label>
           </div>
@@ -896,7 +951,6 @@ The web has always forced you to render text into the DOM just to learn how tall
       // Iterator Path UI wiring
       const iterText = document.querySelector('[data-iter-text]');
       const iterWidth = document.querySelector('[data-iter-width]');
-      const iterLh = document.querySelector('[data-iter-lh]');
       const iterRun = document.querySelector('[data-iter-run]');
       const iterOutput = document.querySelector('[data-iter-output]');
 
@@ -904,13 +958,11 @@ The web has always forced you to render text into the DOM just to learn how tall
         if (!(iterRun instanceof HTMLButtonElement)) return;
         if (!(iterText instanceof HTMLTextAreaElement)) return;
         if (!(iterWidth instanceof HTMLInputElement)) return;
-        if (!(iterLh instanceof HTMLInputElement)) return;
         if (!(iterOutput instanceof HTMLElement)) return;
 
         const text = iterText.value;
         const font = '16px Inter';
         const maxWidth = Number(iterWidth.value);
-        const lineHeight = Number(iterLh.value);
 
         iterRun.disabled = true;
         iterOutput.textContent = 'Running…';
@@ -933,11 +985,10 @@ The web has always forced you to render text into the DOM just to learn how tall
           }
           const t3 = performance.now();
 
-          const totalHeight = lines.length * lineHeight;
           const linesText = lines
             .map((l, i) => `L${i + 1}\t(${l.width.toFixed(1)}px)\t${l.text}`)
             .join('\n');
-          iterOutput.innerHTML = `<pre class="pt-codeblock"><code>LayoutNextLine(prepared, cursor, ${maxWidth}) in a loop\n\n${linesText}\n\nResult: ${JSON.stringify({ lineCount: lines.length, height: totalHeight }, null, 2)}</code></pre>`;
+          iterOutput.innerHTML = `<pre class="pt-codeblock"><code>LayoutNextLine(prepared, cursor, ${maxWidth}) in a loop\n\n${linesText}\n\nResult: ${JSON.stringify({ lineCount: lines.length }, null, 2)}</code></pre>`;
         } catch (err) {
           iterOutput.innerHTML = `<div style="color:#ff8080">Error: ${err instanceof Error ? err.message : String(err)}</div>`;
         } finally {

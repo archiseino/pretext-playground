@@ -23,11 +23,13 @@
   </head>
   <body>
     <nav class="nav" aria-label="Demos">
-      <a href="./index.html">Home</a>
-      <a href="./pretext-api.html">API Reference</a>
-      <a href="./advanced-api.html" aria-current="page">Advanced API</a>
-      <a href="./pretext-in-action.html">Pretext In Action</a>
-      <a href="./ascii-particle-field.html">ASCII Field</a>
+      <a href="index.html">Home</a>
+      <a href="pretext-api.html">Api Reference</a>
+      <a href="pretext-in-action.html">Pretext In Action</a>
+      <a href="advanced-api.html" aria-current="page">Advanced API</a>
+      <a href="ascii-particle-field.html">ASCII field</a>
+      <a href="editorial-engine.html">Editorial Engine</a>
+      <a href="rain-text.html">Rain Text</a>
     </nav>
 
     <h1>Pretext Advanced API</h1>
@@ -241,23 +243,21 @@ Pretext lets you lay out text line by line. You get the actual line strings, the
           prepared,
           w,
           LINE_HEIGHT,
-        );
-        console.log(lines);
+        ); // Getting the height of the text based on the input text and Font
 
-        // Resize canvas and draw each line
+        // Resize the canvas
         canvas.width = w * devicePixelRatio;
         canvas.height = height * devicePixelRatio;
         canvas.style.width = w + 'px';
         canvas.style.height = height + 'px';
         ctx.scale(devicePixelRatio, devicePixelRatio);
 
+        // Font styling
         ctx.font = FONT;
-        ctx.fillStyle = '#111';
+        ctx.fillStyle = '#fff';
         ctx.textBaseline = 'top';
 
-        // Each line has .text and .width — draw them one by one
         for (let i = 0; i < lines.length; i++) {
-          // Offset by ~4px to approximate the baseline within line-height
           ctx.fillText(lines[i].text, 0, i * LINE_HEIGHT + 4);
         }
 
@@ -335,30 +335,30 @@ Pretext lets you lay out text line by line. You get the actual line strings, the
       // 3. layoutNextLine — text around a draggable obstacle
       // ==========================================================
 
-      const flowContainer = document.getElementById('flow-container');
+      const flowContainer = document.getElementById('flow-container'); // Container Box
       const obstacle = document.getElementById('obstacle');
       const flowLinesEl = document.getElementById('flow-lines');
 
       function updateFlow() {
-        var containerWidth = flowContainer.clientWidth;
-        var obsRect = obstacle.getBoundingClientRect();
-        var contRect = flowContainer.getBoundingClientRect();
+        let containerWidth = flowContainer.clientWidth;
+        let obsRect = obstacle.getBoundingClientRect();
+        let contRect = flowContainer.getBoundingClientRect();
 
-        // Obstacle position relative to container
+        // Getting the pos obs relative to the container
         var obsLeft = obsRect.left - contRect.left;
         var obsRight = obsLeft + obsRect.width;
         var obsTop = obsRect.top - contRect.top;
         var obsBottom = obsTop + obsRect.height;
         var gap = 16;
 
-        // Available space on each side of the obstacle
-        var leftWidth = obsLeft - gap;
-        var rightWidth = containerWidth - obsRight - gap;
-        var rightX = obsRight + gap;
+        // Get the space available on each side of the obstacle relative to the container
+        let leftWidth = obsLeft - gap;
+        let rightWidth = containerWidth - obsRight - gap;
+        let rightX = obsRight + gap; // The x position where the right-side text should start
 
-        var cursor = { segmentIndex: 0, graphemeIndex: 0 };
-        var y = 0;
-        var spans = [];
+        let cursor = { segmentIndex: 0, graphemeIndex: 0 };
+        let y = 0;
+        let spans = [];
 
         while (true) {
           var overlaps = y < obsBottom && y + LINE_HEIGHT > obsTop;
@@ -366,7 +366,6 @@ Pretext lets you lay out text line by line. You get the actual line strings, the
           if (!overlaps) {
             // Full-width line, no obstacle in the way
             var line = layoutNextLine(prepared, cursor, containerWidth);
-            console.log(line);
             if (line === null) break;
             spans.push({ text: line.text, y: y, x: 0 });
             cursor = line.end;
@@ -399,12 +398,13 @@ Pretext lets you lay out text line by line. You get the actual line strings, the
           }
         }
 
-        // Render as absolutely positioned spans
-        var html = '';
-        for (var i = 0; i < spans.length; i++) {
-          var escaped = spans[i].text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;');
+        // Render the spans
+        let html = '';
+        for (let i = 0; i < spans.length; i++) {
+          let escaped = spans[i].text
+            .replace(/&/g, '&amp;') // Escape & first to avoid double-escaping
+            .replace(/</g, '&lt;'); // Escape HTML special characters
+          // html += `<div style="position:absolute; left:${spans[i].x}px; top:${spans[i].y}px; height:${LINE_HEIGHT}px; font:${FONT}; line-height:${LINE_HEIGHT}px; white-space:nowrap;">${escaped}</div>`;
           html +=
             '<div style="position:absolute; left:' +
             spans[i].x +
@@ -422,28 +422,26 @@ Pretext lets you lay out text line by line. You get the actual line strings, the
         }
         flowLinesEl.innerHTML = html;
 
-        var totalHeight = Math.max(y, obsBottom) + 10;
+        let totalHeight = Math.max(y, obsBottom) + 10;
         flowContainer.style.height = totalHeight + 'px';
       }
-
       // Drag logic
       var dragging = false;
       var dragOffsetX = 0;
       var dragOffsetY = 0;
-
       obstacle.addEventListener('mousedown', function (e) {
         dragging = true;
-        dragOffsetX = e.clientX - obstacle.getBoundingClientRect().left;
-        dragOffsetY = e.clientY - obstacle.getBoundingClientRect().top;
+        dragOffsetX = e.clientX - obstacle.getBoundingClientRect().left; // get the relative position of X to the obstacle
+        dragOffsetY = e.clientY - obstacle.getBoundingClientRect().top; // get the relative position of Y to the obstacle
         obstacle.style.cursor = 'grabbing';
-        e.preventDefault();
+        e.preventDefault(); // Prevent text selection while dragging
       });
 
       document.addEventListener('mousemove', function (e) {
         if (!dragging) return;
-        var contRect = flowContainer.getBoundingClientRect();
-        var x = e.clientX - contRect.left - dragOffsetX;
-        var y = e.clientY - contRect.top - dragOffsetY;
+        let contRect = flowContainer.getBoundingClientRect();
+        let x = e.clientX - contRect.left - dragOffsetX; // calculate the new X position of the obstacle based on the mouse movement and the initial offset
+        let y = e.clientY - contRect.top - dragOffsetY; // calculate the new Y position of the obstacle based on the mouse movement and the initial offset
 
         // Clamp to container bounds
         x = Math.max(0, Math.min(x, contRect.width - obstacle.offsetWidth));
@@ -461,6 +459,7 @@ Pretext lets you lay out text line by line. You get the actual line strings, the
       });
 
       // Initial render
+
       onTextChange();
     </script>
   </body>

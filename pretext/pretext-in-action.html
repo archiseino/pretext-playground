@@ -1,4 +1,3 @@
-<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -36,6 +35,8 @@
       <a href="pretext-in-action.html" aria-current="page">Pretext In Action</a>
       <a href="advanced-api.html">Advanced API</a>
       <a href="ascii-particle-field.html">ASCII field</a>
+      <a href="editorial-engine.html">Editorial Engine</a>
+      <a href="rain-text.html">Rain Text</a>
     </nav>
 
     <h1>Pretext in Action</h1>
@@ -165,12 +166,141 @@
       }
     </style>
 
+    <!-- ===========================================================
+        4. Chat Bubble
+        Making sure the chat bubble wraps around the maxContainer, so looks nice for a chat
+    ================================================================ -->
+    <h2>4. Chat Bubble</h2>
+    <p style="color: #666; font-size: 14px">
+      A chat bubble that wraps around the maxContainer, demonstrating how
+      Pretext can be used for dynamic text layouts in constrained spaces.
+    </p>
+
+    <div
+      class="chat-bubble"
+      style="
+        height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--pt-border);
+        border-radius: 6px;
+        position: relative;
+      "
+    >
+      <div id="messages" class="messages"></div>
+      <div class="chat-input">
+        <input
+          id="input"
+          type="text"
+          placeholder="Type a message and press Enter"
+        />
+        <button id="sendBtn" type="submit">Send</button>
+      </div>
+    </div>
+
+    <style>
+      .chat-bubble {
+        display: flex;
+        flex-direction: column;
+        background: var(--pt-surface);
+      }
+
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .chat-input {
+        display: flex;
+        gap: 8px;
+        padding: 10px;
+        border-top: 1px solid var(--pt-border);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .chat-input input {
+        flex: 1;
+        background: var(--pt-surface);
+        border: 1px solid var(--pt-border);
+        border-radius: 6px;
+        padding: 8px 10px;
+      }
+
+      .chat-input button {
+        border: 1px solid var(--pt-border-soft);
+        border-radius: 6px;
+        background: var(--pt-surface-strong);
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      .chat-input button:hover {
+        border-color: var(--pt-border-strong);
+      }
+
+      .chat-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .chat-row.user {
+        align-items: flex-end;
+      }
+
+      .chat-row.assistant {
+        align-items: flex-start;
+      }
+
+      .chat-bubble-item {
+        max-width: 320px;
+        padding: 10px 12px;
+        border: 1px solid var(--pt-border);
+        border-radius: 14px;
+        background: var(--pt-surface-strong);
+        font: 16px/22px Inter;
+        color: var(--pt-fg);
+        word-break: break-word;
+      }
+
+      .chat-row.user .chat-bubble-item {
+        border-radius: 14px 14px 4px 14px;
+      }
+
+      .chat-row.assistant .chat-bubble-item {
+        border-radius: 14px 14px 14px 4px;
+      }
+
+      .chat-meta {
+        font-size: 11px;
+        color: var(--pt-muted);
+      }
+    </style>
+
+    <div
+      id="stats"
+      style="
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--pt-muted);
+        text-align: center;
+      "
+    ></div>
+
     <!-- ============================================================
        SCRIPTS — one per demo, sharing the same import
        ============================================================ -->
 
     <script type="module">
-      import { prepare, layout } from '@chenglou/pretext';
+      import {
+        prepare,
+        layout,
+        prepareWithSegments,
+        walkLineRanges,
+      } from '@chenglou/pretext';
 
       // Wait for Inter to load so measurements are accurate
       await document.fonts.ready;
@@ -204,9 +334,9 @@
           const item = document.createElement('div');
           item.className = 'acc-item';
           item.innerHTML = `
-          <div class="acc-header">${section.title}</div>
-          <div class="acc-body"><div class="acc-content">${section.body}</div></div>
-        `;
+              <div class="acc-header">${section.title}</div>
+              <div class="acc-body"><div class="acc-content">${section.body}</div></div>
+            `;
           container.appendChild(item);
           return item;
         });
@@ -241,11 +371,12 @@
         const ITEM_PADDING = 16; // top + bottom padding
         const containerEl = document.getElementById('virtual-container');
         const style = getComputedStyle(containerEl);
+        const containerRect = containerEl.getBoundingClientRect();
         const ITEM_WIDTH =
-          containerEl.clientWidth -
+          containerEl.getBoundingClientRect().width -
           parseFloat(style.paddingLeft) -
           parseFloat(style.paddingRight) -
-          28; // minus item padding
+          50; // minus item padding
 
         const phrases = [
           'The quick brown fox jumps over the lazy dog.',
@@ -274,9 +405,14 @@
 
         // Precompute all heights with Pretext
         const t0 = performance.now();
-        const heights = items.map((text) => {
+        const heights = items.map((text, index) => {
           const prepared = prepare(text, FONT);
-          const { height } = layout(prepared, ITEM_WIDTH, LINE_HEIGHT);
+
+          const { height, lineCount } = layout(
+            prepared,
+            ITEM_WIDTH,
+            LINE_HEIGHT,
+          );
           return height + ITEM_PADDING + 1; // +1 for border
         });
         const prepMs = performance.now() - t0;
@@ -384,6 +520,127 @@
           }
 
           container.appendChild(card);
+        });
+      })();
+      // ===============================================================
+      // 4. CHAT BUBBLE
+      // ===============================================================
+      (() => {
+        const FONT = '16px Inter';
+        const LINE_HEIGHT = 22;
+        const MAX_BUBBLE_WIDTH = 320;
+        const PADDING = 24;
+        const MAX_CONTENT_WIDTH = MAX_BUBBLE_WIDTH - PADDING;
+
+        const messages = [
+          {
+            role: 'assistant',
+            text: 'You specify the font string like "16px Inter" in prepare(). The cache is per-font, so different sizes get separate caches.',
+          },
+          { role: 'user', text: 'I need to try this on our messaging app.' },
+          {
+            role: 'assistant',
+            text: 'Do it! The API is tiny: prepare, layout, prepareWithSegments, layoutWithLines, walkLineRanges, layoutNextLine, clearCache, setLocale.',
+          },
+          { role: 'user', text: 'That is a small surface area. I like it.' },
+          {
+            role: 'assistant',
+            text: 'Minimal API, maximum utility. The whole library is a single file.',
+          },
+        ];
+
+        const prepCache = new Map(); // Map for storing the chat
+
+        function getCached(text) {
+          if (!prepCache.has(text)) {
+            prepCache.set(text, prepareWithSegments(text, FONT));
+          }
+          return prepCache.get(text);
+        }
+
+        // Pretext precompute width calculation
+        function getShrinkWidth(text) {
+          const prepared = getCached(text);
+          let maxW = 0;
+          walkLineRanges(prepared, MAX_CONTENT_WIDTH, (line) => {
+            if (line.width > maxW) maxW = line.width;
+          });
+          return Math.ceil(maxW); // Returning the max width respect to the max container width
+        }
+
+        // Casual DOM calculation
+        function getCSSWidth(text, container) {
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;visibility:hidden;font:${FONT};width:fit-content;max-width:${MAX_BUBBLE_WIDTH}px;padding:0 ${PADDING / 2}px;white-space:normal;word-break:break-word;`;
+          el.textContent = text;
+          container.appendChild(el);
+          const width = el.clientWidth;
+          el.remove();
+          return Math.ceil(width);
+        }
+
+        const messageEl = document.getElementById('messages');
+        const statsEl = document.getElementById('stats');
+        let totalPretextSaved = 0;
+        let totalMessages = 0;
+
+        function addBubble(message) {
+          const isUser = message.role === 'user';
+
+          const pretextWidth = getShrinkWidth(message.text) + PADDING;
+          const cssWidth = getCSSWidth(message.text, messageEl);
+          const saved = cssWidth - pretextWidth;
+          totalPretextSaved += Math.max(saved, 0);
+          totalMessages++;
+
+          const row = document.createElement('div');
+          row.className = `chat-row ${isUser ? 'user' : 'assistant'}`;
+
+          const bubble = document.createElement('div');
+          bubble.className = 'chat-bubble-item';
+          bubble.style.width = Math.min(pretextWidth, MAX_BUBBLE_WIDTH) + 'px';
+          bubble.textContent = message.text;
+
+          const meta = document.createElement('div');
+          meta.className = 'chat-meta';
+          meta.textContent = `Pretext width: ${pretextWidth}px, CSS width: ${cssWidth}px, saved: ${saved}px`;
+
+          row.appendChild(bubble);
+          row.append(meta);
+          messageEl.appendChild(row);
+          messageEl.scrollTop = messageEl.scrollHeight;
+
+          statsEl.textContent = `${totalMessages} bubbles | total px saved: ${totalPretextSaved}px | cache size: ${prepCache.size} entries`;
+        }
+
+        messages.forEach(addBubble);
+
+        const input = document.getElementById('input');
+        const sendBtn = document.getElementById('sendBtn');
+        function send() {
+          const text = input.value.trim();
+          if (!text) return;
+          addBubble({ role: 'user', text: input.value });
+          input.value = '';
+
+          // Precompute answer the user question / simulate the answer on 400 ms
+          setTimeout(() => {
+            const replies = [
+              'Pretext measures via canvas — no DOM reads, no reflow.',
+              'The prepare() call is the expensive one. Layout is pure arithmetic after that.',
+              'Each bubble reuses the cached prepared result. Only new text triggers a fresh prepare().',
+              'Shrink-wrapping means the bubble is exactly as wide as its widest line — no wasted space.',
+            ];
+            addBubble({
+              role: 'assistant',
+              text: replies[Math.floor(Math.random() * replies.length)],
+            });
+          }, 400);
+        }
+
+        sendBtn.addEventListener('click', send);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') send();
         });
       })();
     </script>
