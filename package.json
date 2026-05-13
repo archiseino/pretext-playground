@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "vite": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "dist": "vite build --mode production",
+    "preview": "vite preview"
   },
   "author": "",
   "license": "ISC",
